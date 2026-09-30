@@ -1,0 +1,377 @@
+cat > /mnt/user-data/outputs/solde-compte.html << 'HTMLEOF'
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Solde du compte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  --paper:#FAF8F4; --paper-2:#F1EDE3;
+  --line:#DDD5C4;
+  --brass:#A8823C;
+  --text:#1B2A41; --text-dim:#5B6577;
+  --ink:#1B2A41;
+  --green:#3E6E52; --green-bg:#E4EEE6;
+  --amber:#8A6A22; --amber-bg:#F3EAD3;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#181611; --paper-2:#1F1C16;
+    --line:#3A362C; --brass:#C9A25C;
+    --text:#EDE7D9; --text-dim:#A79E8B; --ink:#EDE7D9;
+    --green:#8FCBA8; --green-bg:#1E2E24;
+    --amber:#E0BE7E; --amber-bg:#332A16;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#181611; --paper-2:#1F1C16;
+  --line:#3A362C; --brass:#C9A25C;
+  --text:#EDE7D9; --text-dim:#A79E8B; --ink:#EDE7D9;
+  --green:#8FCBA8; --green-bg:#1E2E24;
+  --amber:#E0BE7E; --amber-bg:#332A16;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*{box-sizing:border-box;}
+body{margin:0; background:var(--paper); color:var(--text); font-family:'Inter',system-ui,sans-serif;}
+.wrap{max-width:640px; margin:0 auto; padding:26px 18px 60px;}
+h1{font-family:'Source Serif 4',Georgia,serif; font-weight:600; font-size:1.5rem; margin:0 0 2px;}
+.sub{color:var(--text-dim); font-size:.88rem; margin:0 0 14px;}
+
+.status{
+  display:flex; align-items:center; gap:6px; font-size:.78rem; padding:6px 10px;
+  border-radius:20px; width:fit-content; margin-bottom:16px; background:var(--paper-2); color:var(--text-dim);
+}
+.status .dot{width:7px; height:7px; border-radius:50%; background:var(--text-dim);}
+.status.synced{background:var(--green-bg); color:var(--green);}
+.status.synced .dot{background:var(--green);}
+.status.readonly{background:var(--amber-bg); color:var(--amber);}
+.status.readonly .dot{background:var(--amber);}
+
+.card{background:var(--paper-2); border:1px solid var(--line); border-radius:6px; padding:16px; margin-bottom:16px;}
+.card h2{font-family:'Source Serif 4',serif; font-size:1rem; font-weight:600; margin:0 0 12px;}
+
+.row{display:grid; grid-template-columns:1fr 100px 110px; gap:8px; align-items:center; padding:7px 0;}
+.row.head{color:var(--text-dim); font-size:.72rem; padding-bottom:4px;}
+.row .lbl{font-size:.9rem;}
+input[type=number]{
+  width:100%; padding:7px 8px; border:1px solid var(--line); border-radius:4px;
+  background:var(--paper); color:var(--text); font-size:.88rem; font-family:inherit; text-align:right;
+}
+input[type=number]:focus{outline:2px solid var(--brass); outline-offset:1px;}
+input[type=number]:disabled{opacity:.6;}
+.readonly{background:var(--paper-2); color:var(--text-dim); font-weight:600;}
+.divider{border-top:1px solid var(--line); margin:6px 0;}
+
+.result-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px;}
+.result{
+  background:var(--paper); border:1px solid var(--line); border-radius:4px;
+  padding:12px; text-align:center;
+}
+.result .amt{font-family:'Source Serif 4',serif; font-size:1.15rem; font-weight:600;}
+.result .lbl{font-size:.72rem; color:var(--text-dim); margin-top:3px;}
+.grand{
+  background:var(--ink); color:var(--paper); border-radius:6px; padding:18px; text-align:center; margin-top:14px;
+}
+.grand .amt{font-family:'Source Serif 4',serif; font-size:1.9rem; font-weight:600;}
+.grand .lbl{font-size:.8rem; opacity:.75; margin-top:4px;}
+
+.rate-row{display:flex; align-items:center; gap:10px;}
+.rate-row label{font-size:.88rem; flex:1;}
+.rate-row input{width:110px;}
+
+.save-btn{
+  background:var(--ink); color:var(--paper); border:none; border-radius:4px;
+  padding:10px 18px; font-size:.9rem; font-weight:600; font-family:inherit; cursor:pointer;
+}
+.save-btn:hover{opacity:.9;}
+.save-btn:disabled{opacity:.5; cursor:default;}
+.save-feedback{font-size:.82rem; color:var(--green);}
+.save-feedback.error{color:#A8402F;}
+.last-saved{font-size:.76rem; color:var(--text-dim); margin-top:8px;}
+
+table.db-table{width:100%; border-collapse:collapse; font-size:.86rem; margin-top:4px;}
+table.db-table th{
+  text-align:left; font-size:.72rem; color:var(--text-dim); font-weight:600;
+  padding:6px 8px; border-bottom:1px solid var(--line);
+}
+table.db-table th.num, table.db-table td.num{text-align:right;}
+table.db-table td{padding:7px 8px; border-bottom:1px solid var(--line);}
+table.db-table tr:last-child td{border-bottom:none;}
+table.db-table td.type{color:var(--text-dim); font-size:.76rem;}
+.empty-table{font-size:.82rem; color:var(--text-dim); padding:8px 0;}
+
+@media (max-width:420px){
+  .row{grid-template-columns:1fr 80px 90px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Solde du compte</h1>
+  <p class="sub">Portefeuilles, espèces et créances, en un seul calcul.</p>
+  <div class="status" id="syncStatus"><span class="dot"></span><span id="syncLabel">Connexion…</span></div>
+
+  <div class="card">
+    <h2>Soldes par portefeuille</h2>
+    <div class="row head"><div></div><div style="text-align:right">$</div><div style="text-align:right">Fc</div></div>
+    <div id="walletRows"></div>
+    <div class="divider"></div>
+    <div class="row">
+      <div class="lbl" style="font-weight:600">Total</div>
+      <div><input type="number" class="readonly" id="totalUSD" readonly></div>
+      <div><input type="number" class="readonly" id="totalFC" readonly></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Créances</h2>
+    <div class="row">
+      <div class="lbl">Créances</div>
+      <div><input type="number" id="creancesUSD" value="0" step="0.01"></div>
+      <div><input type="number" id="creancesFC" value="0" step="1"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Taux de change</h2>
+    <div class="rate-row">
+      <label for="rate">Francs congolais pour 1 $</label>
+      <input type="number" id="rate" value="2252" step="0.01" min="0.01">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Résultat</h2>
+    <div class="result-grid">
+      <div class="result"><div class="amt" id="sumUSD">0</div><div class="lbl">Total $ + créances $</div></div>
+      <div class="result"><div class="amt" id="sumFCconv">0</div><div class="lbl">Total Fc + créances Fc, converti en $</div></div>
+    </div>
+    <div class="grand">
+      <div class="amt" id="grandTotal">0 $</div>
+      <div class="lbl">Total général équivalent</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <button id="saveBtn" class="save-btn">Enregistrer dans la base</button>
+      <span id="saveFeedback" class="save-feedback"></span>
+    </div>
+    <div class="last-saved" id="lastSaved">Jamais enregistré</div>
+  </div>
+
+  <div class="card">
+    <h2>Table enregistrée dans la base</h2>
+    <p class="sub" style="margin-bottom:8px;">Chaque ligne ci-dessous est un enregistrement distinct de la base, avec son libellé et ses montants.</p>
+    <div id="dbTableWrap"><div class="empty-table">Aucune donnée enregistrée pour l'instant.</div></div>
+  </div>
+</div>
+
+<script>
+const wallets = [
+  {slug:'airtel-money', libelle:'Airtel money'},
+  {slug:'orange-money', libelle:'Orange money'},
+  {slug:'m-pesa', libelle:'M-pesa'},
+  {slug:'vodacom', libelle:'Vodacom'},
+  {slug:'africell', libelle:'Africell'},
+  {slug:'especes', libelle:'Espèces'}
+];
+const CREANCES_SLUG = 'creances';
+
+const walletRowsEl = document.getElementById('walletRows');
+wallets.forEach((w, i)=>{
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `
+    <div class="lbl">${w.libelle}</div>
+    <div><input type="number" class="usd-in" data-i="${i}" value="0" step="0.01"></div>
+    <div><input type="number" class="fc-in" data-i="${i}" value="0" step="1"></div>
+  `;
+  walletRowsEl.appendChild(row);
+});
+
+const usdInputs = [...document.querySelectorAll('.usd-in')];
+const fcInputs = [...document.querySelectorAll('.fc-in')];
+const creancesUSD = document.getElementById('creancesUSD');
+const creancesFC = document.getElementById('creancesFC');
+const rateInput = document.getElementById('rate');
+const allInputs = [...usdInputs, ...fcInputs, creancesUSD, creancesFC, rateInput];
+const statusEl = document.getElementById('syncStatus');
+const syncLabel = document.getElementById('syncLabel');
+const saveBtn = document.getElementById('saveBtn');
+const saveFeedback = document.getElementById('saveFeedback');
+const lastSavedEl = document.getElementById('lastSaved');
+const dbTableWrap = document.getElementById('dbTableWrap');
+
+function num(el){ const v = parseFloat(el.value); return isNaN(v) ? 0 : v; }
+function fmt(n, dec){
+  return new Intl.NumberFormat('fr-FR',{minimumFractionDigits:dec, maximumFractionDigits:dec}).format(n);
+}
+
+function recalc(){
+  const totalUSD = usdInputs.reduce((s,el)=>s+num(el),0);
+  const totalFC = fcInputs.reduce((s,el)=>s+num(el),0);
+  document.getElementById('totalUSD').value = totalUSD.toFixed(2);
+  document.getElementById('totalFC').value = totalFC.toFixed(0);
+
+  const cUSD = num(creancesUSD);
+  const cFC = num(creancesFC);
+  const rate = num(rateInput) || 1;
+
+  const sumUSD = totalUSD + cUSD;
+  const sumFC = totalFC + cFC;
+  const sumFCconv = sumFC / rate;
+  const grand = sumUSD + sumFCconv;
+
+  document.getElementById('sumUSD').textContent = fmt(sumUSD,2) + ' $';
+  document.getElementById('sumFCconv').textContent = fmt(sumFCconv,2) + ' $';
+  document.getElementById('grandTotal').textContent = fmt(grand,2) + ' $';
+}
+
+function buildRows(){
+  const rows = wallets.map((w,i)=>({
+    slug: w.slug, libelle: w.libelle, usd: num(usdInputs[i]), fc: num(fcInputs[i]), type: 'portefeuille'
+  }));
+  rows.push({slug: CREANCES_SLUG, libelle: 'Créances', usd: num(creancesUSD), fc: num(creancesFC), type: 'créance'});
+  return rows;
+}
+
+function renderTable(rows){
+  if(!rows || !rows.length){
+    dbTableWrap.innerHTML = '<div class="empty-table">Aucune donnée enregistrée pour l\u2019instant.</div>';
+    return;
+  }
+  const order = {};
+  wallets.forEach((w,i)=>{ order[w.slug] = i; });
+  order[CREANCES_SLUG] = wallets.length;
+  const sorted = [...rows].sort((a,b)=> (order[a.slug] ?? 99) - (order[b.slug] ?? 99));
+  let html = '<table class="db-table"><thead><tr><th>Libellé</th><th class="num">$</th><th class="num">Fc</th><th>Type</th></tr></thead><tbody>';
+  sorted.forEach(r=>{
+    html += `<tr><td>${r.libelle}</td><td class="num">${fmt(r.usd,2)}</td><td class="num">${fmt(r.fc,0)}</td><td class="type">${r.type}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  dbTableWrap.innerHTML = html;
+}
+
+function applyRows(rows){
+  const bySlug = {};
+  rows.forEach(r=>{ bySlug[r.slug] = r; });
+  wallets.forEach((w,i)=>{
+    const r = bySlug[w.slug];
+    if(!r) return;
+    if(document.activeElement!==usdInputs[i]) usdInputs[i].value = r.usd;
+    if(document.activeElement!==fcInputs[i]) fcInputs[i].value = r.fc;
+  });
+  const cr = bySlug[CREANCES_SLUG];
+  if(cr){
+    if(document.activeElement!==creancesUSD) creancesUSD.value = cr.usd;
+    if(document.activeElement!==creancesFC) creancesFC.value = cr.fc;
+  }
+  recalc();
+  renderTable(rows);
+}
+
+function stampSaved(date){
+  const d = date ? new Date(date) : new Date();
+  lastSavedEl.textContent = 'Dernière sauvegarde : ' + d.toLocaleString('fr-FR');
+}
+
+function setStatus(mode){
+  statusEl.className = 'status' + (mode==='synced' ? ' synced' : mode==='readonly' ? ' readonly' : '');
+  syncLabel.textContent = mode==='synced' ? 'Synchronisé — partagé avec le lien'
+    : mode==='readonly' ? 'Lecture seule (pas d\u2019accès en écriture)'
+    : mode==='offline' ? 'Hors ligne — les données ne sont pas enregistrées'
+    : 'Connexion…';
+}
+
+allInputs.forEach(el=>{
+  el.addEventListener('input', recalc);
+});
+
+let lignesCol = null;
+let tauxDoc = null;
+let canWrite = true;
+
+saveBtn.addEventListener('click', async ()=>{
+  if(!lignesCol || !tauxDoc){
+    saveFeedback.textContent = 'Non connecté à la base.';
+    saveFeedback.className = 'save-feedback error';
+    return;
+  }
+  if(!canWrite){
+    saveFeedback.textContent = 'Lecture seule : pas de droit d\u2019écriture.';
+    saveFeedback.className = 'save-feedback error';
+    return;
+  }
+  saveBtn.disabled = true;
+  saveFeedback.textContent = 'Enregistrement…';
+  saveFeedback.className = 'save-feedback';
+  const rows = buildRows();
+  try{
+    for(const r of rows){
+      await lignesCol.doc(r.slug).set(r);
+    }
+    await tauxDoc.set({valeur: num(rateInput) || 1});
+    saveFeedback.textContent = 'Enregistré ✓';
+    stampSaved();
+    renderTable(rows);
+  }catch(e){
+    if(e && (e.code === 'not_granted' || e.code === 'not_writer')){
+      canWrite = false;
+      setStatus('readonly');
+    }
+    saveFeedback.textContent = 'Échec de l\u2019enregistrement.';
+    saveFeedback.className = 'save-feedback error';
+    console.error('Save error', e);
+  }
+  saveBtn.disabled = false;
+});
+
+async function init(){
+  recalc();
+  let db = null;
+  try{ db = await claude.use('db'); }catch(e){ db = null; }
+  if(!db){
+    setStatus('offline');
+    return;
+  }
+  lignesCol = db.collection('lignes');
+  tauxDoc = db.doc('parametres/taux');
+  try{
+    const snap = await lignesCol.get();
+    const rows = (snap && snap.docs) ? snap.docs.map(d=>d.data) : [];
+    if(rows.length) applyRows(rows);
+    const tauxSnap = await tauxDoc.get();
+    if(tauxSnap && tauxSnap.data && tauxSnap.data.valeur){
+      rateInput.value = tauxSnap.data.valeur;
+      recalc();
+    }
+    if(rows.length) stampSaved();
+    setStatus('synced');
+  }catch(e){
+    console.error('Load error', e);
+    setStatus('offline');
+  }
+  try{
+    lignesCol.onSnapshot((snap)=>{
+      const rows = (snap && snap.docs) ? snap.docs.map(d=>d.data) : [];
+      if(rows.length){
+        applyRows(rows);
+        stampSaved();
+      }
+    });
+  }catch(e){ console.error('Subscribe error', e); }
+}
+
+init();
+</script>
+</body>
+</html>
+HTMLEOF
+echo "done"
